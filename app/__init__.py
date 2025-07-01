@@ -1,25 +1,44 @@
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from app.extensions import db, migrate, bcrypt, jwt
+from flask_jwt_extended import JWTManager
+from app.controllers.auth_controller import auth
 
 
 
 
 
-# Apllication Function factory: it builds and returns an instance of a Flask application
+
+
+#  Apllication Function factory: it builds and returns an instance of a Flask application
 def create_app():  # This is an application factory
-    app = Flask(__name__)  # Initialize the Flask app
+    app = Flask(__name__) # Initialize the Flask app
     app.config.from_object('config.Config')  # registering the database
 
 
+    db.init_app(app) 
+    migrate.init_app(app, db) 
+    jwt.init_app(app)
+    bcrypt.init_app(app)
+
+    app.config['JWT_SECRET_KEY'] = 'HS256'
+    # jwt = JWTManager(app)
 
 
+    from app.models.user import User
+    from app.models.service import Service
+    from app.models.product import Product
+    from app.models.order import Order
+    from app.models.booking import Booking
+    from app.models.feedback import Feedback
+    from app.models.farmer import Farmer
+    
 
 
-
-
-
-
+ 
 # register blueprints
-
+    app.register_blueprint(auth)
 
     
    # migrations are always in order
@@ -27,7 +46,7 @@ def create_app():  # This is an application factory
     # Define routes
     @app.route("/")
     def home():
-       return "Author's API setup"
+       return "Yucca Consulting Limited"
 
     return app  # Return the app instance
 
