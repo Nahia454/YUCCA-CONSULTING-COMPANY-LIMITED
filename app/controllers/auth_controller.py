@@ -22,6 +22,7 @@ def register_user():
     contact = data.get('contact')
     email = data.get('email')
     password = data.get('password')
+    user_type = data['user_type']
 
 #Validations of the incoming request.
     if not first_name or not last_name or not contact or not password or not email:
@@ -44,14 +45,14 @@ def register_user():
         hashed_password = bcrypt.generate_password_hash(password)# Hashing the password
 
         #Creating the user
-        new_user = User(first_name=first_name,last_name=last_name,password=hashed_password,email=email,contact=contact)
+        new_user = User(first_name=first_name,last_name=last_name,password=hashed_password,email=email,contact=contact,user_type=user_type)
         db.session.add(new_user)
         db.session.commit()
         #User name
         username = new_user.get_full_name()
 
         return({
-            'message': username + " has been created succesfully " ,
+            'message': username + " has been succesfully created as " + user_type,
             'user':{
                 "id":new_user.user_id,
                 "first_name":new_user.first_name,
