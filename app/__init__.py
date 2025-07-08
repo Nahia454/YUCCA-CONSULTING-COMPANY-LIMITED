@@ -6,6 +6,8 @@ from flask_jwt_extended import JWTManager
 from app.controllers.auth_controller import auth
 from app.controllers.users.user_controller import users
 from app.controllers.services.service_controller import services
+from app.controllers.farmer.farmer_controller import farmers
+from app.controllers.booking.booking_controller import bookings
 
 
 
@@ -43,6 +45,8 @@ def create_app():  # This is an application factory
     app.register_blueprint(auth)
     app.register_blueprint(users)
     app.register_blueprint(services)
+    app.register_blueprint(farmers)
+    app.register_blueprint(bookings)
 
     
    # migrations are always in order
