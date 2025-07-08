@@ -1,5 +1,6 @@
 from app.extensions import db
 from datetime import datetime
+
 class Feedback(db.Model):
     __tablename__= "feedbacks"
     feedback_id = db.Column(db.Integer, primary_key=True)

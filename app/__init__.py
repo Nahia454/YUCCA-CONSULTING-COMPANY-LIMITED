@@ -58,8 +58,7 @@ def create_app():  # This is an application factory
 
     return app  # Return the app instance
 
-# Only run the app if this script is executed directly
-if  __name__ == '__main__':
-  
+
+if __name__ == '__main__':
     app = create_app()
     app.run(debug=True)  # Run the app
