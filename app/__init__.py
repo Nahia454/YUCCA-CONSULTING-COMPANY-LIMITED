@@ -1,38 +1,42 @@
 from flask import Flask
+from app.extensions import db, migrate
 
 
 
 
 
-# Apllication Function factory: it builds and returns an instance of a Flask application
+
 def create_app():  # This is an application factory
     app = Flask(__name__)  # Initialize the Flask app
     app.config.from_object('config.Config')  # registering the database
 
-
-
-
-
-
-
-
-
-
-# register blueprints
+    db.init_app(app)         # initializing db with app
+    migrate.init_app(app, db)  # initializing migration with app and db
 
 
     
-   # migrations are always in order
+    # import the models  
+    from app.models.booking import Booking
+    from app.models.farmer import Farmer
+    from app.models.feedback import Feedback
+    from app.models.order import Order
+    from app.models.product import Product
+    from app.models.service import Service
+    from app.models.user import User
+
+    
+    
+
+    
 
     # Define routes
     @app.route("/")
     def home():
-       return "Author's API setup"
+       return "Yucca's  API setup"
 
     return app  # Return the app instance
 
-# Only run the app if this script is executed directly
-if  __name__ == '__main__':
-  
+
+if __name__ == '__main__':
     app = create_app()
     app.run(debug=True)  # Run the app

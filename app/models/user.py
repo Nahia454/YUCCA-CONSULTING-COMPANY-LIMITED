@@ -10,7 +10,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     contact = db.Column(db.String(20))
     password = db.Column(db.String(128), nullable=False)
-    created_at = db.Column(db.DateTime,defult = datetime.now())
+    created_at = db.Column(db.DateTime,default = datetime.now())
     updated_at = db.Column(db.DateTime, onupdate = datetime.now())
 
     def __init__(self,first_name,last_name,email,contact,password):
