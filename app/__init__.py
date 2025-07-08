@@ -1,38 +1,56 @@
 from flask import Flask
-from app.extensions import db, migrate
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from app.extensions import db, migrate, bcrypt, jwt
+from flask_jwt_extended import JWTManager
+from app.controllers.auth_controller import auth
+from app.controllers.users.user_controller import users
+from app.controllers.services.service_controller import services
 
 
 
 
 
 
+
+#  Apllication Function factory: it builds and returns an instance of a Flask application
 def create_app():  # This is an application factory
-    app = Flask(__name__)  # Initialize the Flask app
+    app = Flask(__name__) # Initialize the Flask app
     app.config.from_object('config.Config')  # registering the database
 
-    db.init_app(app)         # initializing db with app
-    migrate.init_app(app, db)  # initializing migration with app and db
+
+    db.init_app(app) 
+    migrate.init_app(app, db) 
+    jwt.init_app(app)
+    bcrypt.init_app(app)
+
+    app.config['JWT_SECRET_KEY'] = 'HS256'
+    # jwt = JWTManager(app)
 
 
-    
-    # import the models  
-    from app.models.booking import Booking
-    from app.models.farmer import Farmer
-    from app.models.feedback import Feedback
-    from app.models.order import Order
-    from app.models.product import Product
-    from app.models.service import Service
     from app.models.user import User
+    from app.models.service import Service
+    from app.models.product import Product
+    from app.models.order import Order
+    from app.models.booking import Booking
+    from app.models.feedback import Feedback
+    from app.models.farmer import Farmer
+    
+
+
+ 
+# register blueprints
+    app.register_blueprint(auth)
+    app.register_blueprint(users)
+    app.register_blueprint(services)
 
     
-    
-
-    
+   # migrations are always in order
 
     # Define routes
     @app.route("/")
     def home():
-       return "Yucca's  API setup"
+       return "Yucca Consulting Limited"
 
     return app  # Return the app instance
 

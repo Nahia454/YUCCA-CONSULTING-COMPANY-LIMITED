@@ -11,9 +11,10 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, onupdate=datetime.now)
 
+
     user = db.relationship('User', backref='orders')
 
-    def __init__(self, order_date, totalamount):
+def __init__(self, order_date, totalamount):
         self.order_date = order_date
         self.totalamount = totalamount
 

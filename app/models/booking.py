@@ -10,5 +10,6 @@ class Booking(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now())  
     updated_at = db.Column(db.DateTime, onupdate=datetime.now())  
 
+
     user = db.relationship('User', backref='bookings')
     service = db.relationship('Service', backref='bookings')
