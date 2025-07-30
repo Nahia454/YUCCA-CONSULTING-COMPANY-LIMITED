@@ -1,64 +1,52 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from app.extensions import db, migrate, bcrypt, jwt
-from flask_jwt_extended import JWTManager
+from app.extensions import db, migrate, jwt, bcrypt, cors
+
+# Import blueprints
 from app.controllers.auth_controller import auth
 from app.controllers.users.user_controller import users
 from app.controllers.services.service_controller import services
 from app.controllers.farmer.farmer_controller import farmers
 from app.controllers.booking.booking_controller import bookings
+from app.controllers.product_controller import products
+from app.controllers.feedback_controller import feedbacks
+from app.controllers.admin.admin_controller import admin
 
+# Import models to register them with SQLAlchemy
+from app.models.user import User
+from app.models.service import Service
+from app.models.product import Product
+from app.models.booking import Booking
+from app.models.feedback import Feedback
+from app.models.farmer import Farmer
 
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object('config.Config')  # Or any config file you use
 
-
-
-
-
-#  Apllication Function factory: it builds and returns an instance of a Flask application
-def create_app():  # This is an application factory
-    app = Flask(__name__) # Initialize the Flask app
-    app.config.from_object('config.Config')  # registering the database
-
-
-    db.init_app(app) 
-    migrate.init_app(app, db) 
+    # Initialize extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
+    cors.init_app(app, supports_credentials=True)
     jwt.init_app(app)
     bcrypt.init_app(app)
 
-    app.config['JWT_SECRET_KEY'] = 'HS256'
-    # jwt = JWTManager(app)
 
+    # JWT secret key
+    app.config['JWT_SECRET_KEY'] = 'your-secret-key'  # change in production
 
-    from app.models.user import User
-    from app.models.service import Service
-    from app.models.product import Product
-    from app.models.order import Order
-    from app.models.booking import Booking
-    from app.models.feedback import Feedback
-    from app.models.farmer import Farmer
-    
-
-
- 
-# register blueprints
+    # Register blueprints
     app.register_blueprint(auth)
     app.register_blueprint(users)
     app.register_blueprint(services)
     app.register_blueprint(farmers)
     app.register_blueprint(bookings)
+    app.register_blueprint(products)
+    app.register_blueprint(feedbacks)
+    app.register_blueprint(admin)
 
-    
-   # migrations are always in order
-
-    # Define routes
+    # Default route
     @app.route("/")
     def home():
-       return "Yucca Consulting Limited"
+        return "Welcome to Yucca Consulting Limited API"
 
-    return app  # Return the app instance
-
-
-if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True)  # Run the app
+    return app

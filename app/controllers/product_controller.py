@@ -1,72 +1,134 @@
 from flask import Blueprint, request, jsonify
-from app.status_codes import HTTP_400_BAD_REQUEST, HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_201_CREATED, HTTP_500_INTERNAL_SERVER_ERROR
-from app.models.product import Product
-from app.extensions import db
+from app.models.product import Product, db
+from flask_jwt_extended import jwt_required
+from app.status_codes import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_200_OK
 
-# product blueprint
-product = Blueprint('product', __name__, url_prefix='/api/v1/product')
+products = Blueprint('products', __name__, url_prefix='/api/v1/products')
 
-# create a product 
-@product.route('/products', methods=['POST'])
+# Create product
+@products.route('/create', methods=["POST"])
+@jwt_required()
 def create_product():
-    data = request.get_json()
-    new_product = Product(order_id=data['order_id'], service_id=data['service_id'],
-                          quantity=data['quantity'], subtotal=data['subtotal'])
-    db.session.add(new_product)
-    db.session.commit()
-    return jsonify({'message': 'Product created successfully'}), HTTP_201_CREATED
+    try:
+        data = request.get_json()
+        name = data.get("name")
+        category = data.get("category")
+        image = data.get("image")
 
-# get all products
-@product.route('/products', methods=['GET'])
+        if not name:
+            return jsonify({'error': "Product name is required"}), HTTP_400_BAD_REQUEST
+
+        if Product.query.filter_by(name=name).first():
+            return jsonify({'error': 'Product name already exists'}), HTTP_400_BAD_REQUEST
+
+        new_product = Product(name=name, category=category, image=image)
+        db.session.add(new_product)
+        db.session.commit()
+
+        return jsonify({
+            'message': f"'{name}' created successfully",
+            'product': {
+                'id': new_product.product_id,
+                'name': new_product.name,
+                'category': new_product.category,
+                'image': new_product.image,
+                'created_at': new_product.created_at.isoformat()
+            }
+        }), HTTP_201_CREATED
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+
+# Get all products
+@products.route('/', methods=["GET"])
 def get_all_products():
-    products = Product.query.all()
-    output = []
-    for product in products:
-        product_data = {
-            'product_id': product.product_id,
-            'order_id': product.order_id,
-            'service_id': product.service_id,
-            'quantity': product.quantity,
-            'subtotal': product.subtotal
-        }
-        output.append(product_data)
-    return jsonify({'products': output}), HTTP_200_OK
+    try:
+        products_list = Product.query.all()
+        results = [{
+            "id": p.product_id,
+            "name": p.name,
+            "category": p.category,
+            "image": p.image,
+            "created_at": p.created_at.isoformat()
+        } for p in products_list]
 
-# get product by id
-@product.route('/products/<id>', methods=['GET'])
-def get_product_by_id(id):
-    product = Product.query.get(id)
-    if product is None:
-        return jsonify({'message': 'Product not found'}), HTTP_400_BAD_REQUEST
-    product_data = {
-        'product_id': product.product_id,
-        'order_id': product.order_id,
-        'service_id': product.service_id,
-        'quantity': product.quantity,
-        'subtotal': product.subtotal
-    }
-    return jsonify({'product': product_data}), HTTP_200_OK
+        return jsonify({
+            "message": "All products retrieved successfully",
+            "total": len(results),
+            "products": results
+        }), HTTP_200_OK
 
-# update a product
-@product.route('/products/<id>', methods=['PUT'])
+    except Exception as e:
+        return jsonify({"error": str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+
+# Get product by ID
+@products.route('/product/<int:id>', methods=["GET"])
+@jwt_required()
+def get_product(id):
+    try:
+        product = Product.query.get(id)
+        if not product:
+            return jsonify({"error": "Product not found"}), HTTP_404_NOT_FOUND
+
+        return jsonify({
+            "message": "Product retrieved successfully",
+            "product": {
+                "id": product.product_id,
+                "name": product.name,
+                "category": product.category,
+                "image": product.image,
+                "created_at": product.created_at.isoformat()
+            }
+        }), HTTP_200_OK
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+
+# Update product
+@products.route('/edit/<int:id>', methods=["PUT", "PATCH"])
+@jwt_required()
 def update_product(id):
-    product = Product.query.get(id)
-    if product is None:
-        return jsonify({'message': 'Product not found'}), HTTP_400_BAD_REQUEST
-    data = request.get_json()
-    product.order_id = data['order_id']
-    product.service_id = data['service_id']
-    product.quantity = data['quantity']
-    product.subtotal = data['subtotal']
-    db.session.commit()
-    return jsonify({'message': 'product updated successfully'}), HTTP_200_OK
+    try:
+        product = Product.query.get(id)
+        if not product:
+            return jsonify({'error': 'Product not found'}), HTTP_404_NOT_FOUND
 
-# delete a product
-@product.route('/products/<id>', methods=['DELETE'])
+        data = request.get_json()
+        product.name = data.get('name', product.name)
+        product.category = data.get('category', product.category)
+        product.image = data.get('image', product.image)
+
+        db.session.commit()
+
+        return jsonify({
+            "message": "Product updated successfully",
+            "product": {
+                "id": product.product_id,
+                "name": product.name,
+                "category": product.category,
+                "image": product.image
+            }
+        }), HTTP_200_OK
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+
+# Delete product
+@products.route('/delete/<int:id>', methods=["DELETE"])
+@jwt_required()
 def delete_product(id):
-    product = Product.query.get(id)
-    if product is None:
-        return jsonify({'message': 'Product not found'}), HTTP_404_NOT_FOUND
-    db.session.delete(product)
-    db.session.commit()
-    return jsonify({'message': 'product deleted successfully'}), HTTP_200_OK
+    try:
+        product = Product.query.get(id)
+        if not product:
+            return jsonify({'error': 'Product not found'}), HTTP_404_NOT_FOUND
+
+        db.session.delete(product)
+        db.session.commit()
+
+        return jsonify({'message': 'Product deleted successfully'}), HTTP_200_OK
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), HTTP_500_INTERNAL_SERVER_ERROR

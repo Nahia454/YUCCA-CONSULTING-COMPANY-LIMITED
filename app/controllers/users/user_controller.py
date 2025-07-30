@@ -92,7 +92,7 @@ def updateuserdetails(id):
         if not user:
             return jsonify({"error":"user not found"}), HTTP_404_NOT_FOUND
 
-        elif user.user_id!=current_user:
+        elif loggedInUser.user_type != 'admin' :
             return jsonify({"error":"You are not authorised to update the user details"}),HTTP_403_FORBIDDEN
         
         else:
@@ -150,18 +150,12 @@ def Delete_user_details(id):
         if not user:
             return jsonify({"error":"user not found"}), HTTP_404_NOT_FOUND
 
-        elif user.user_id!= current_user_id:
-            return jsonify({"error":"You are not authorised to delete the author details"}),HTTP_403_FORBIDDEN
+        elif loggedInUser.user_type != 'admin':
+            return jsonify({"error":"You are not authorised to delete the user details"}),HTTP_403_FORBIDDEN
         
         else:
 
-            # #deleting associated orders
-            # for order in user.orders:
-            #     db.session.delete(order)
-
-            # #deleting associated bookings
-            # for booking in user.bookings:
-            #     db.session.delete(booking)
+        
     
             db.session.delete(user)
             db.session.commit()

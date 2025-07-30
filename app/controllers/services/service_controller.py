@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from app.models.service import Service, db
+from app.models.service import Service,  db
+from app.models.user import User
 from app.extensions import bcrypt, jwt
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.status_codes import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_200_OK,HTTP_403_FORBIDDEN
@@ -72,7 +73,8 @@ def get_All_services():
                 "id":service.service_id,
                 "name":service.name,
                 "price":service.price,
-                "description":service.description,              
+                "description":service.description, 
+                "category":service.category,              
                 "created_at":service.created_at
             }
 
@@ -109,6 +111,7 @@ def getservice(id):
                 "name":service.name,
                 "price":service.price,
                 "description":service.description,
+                 "category":service.category, 
                 "created_at":service.created_at,
                
             }
@@ -125,44 +128,43 @@ def getservice(id):
 @jwt_required()
 def update_service_details(id):
     try:
-        current_service_id = int(get_jwt_identity())
-        loggedInservice = Service.query.filter_by(service_id=current_service_id).first()
+        current_user_id = int(get_jwt_identity())
+        
+        # Get the logged-in user from User model, 
+        logged_in_user = User.query.get(current_user_id)
+
+        if logged_in_user.user_type != 'admin':
+            return jsonify({"error": "You are not authorized to update the service details"}), HTTP_403_FORBIDDEN
 
         service_to_update = Service.query.filter_by(service_id=id).first()
 
         if not service_to_update:
-            return jsonify({"error": "service not found"}), HTTP_404_NOT_FOUND
+            return jsonify({"error": "Service not found"}), HTTP_404_NOT_FOUND
 
-        # elif service_to_update.service_id != current_service_id:
-        #     return jsonify({"error": "You are not authorized to update the service details"}), HTTP_403_FORBIDDEN
+        data = request.get_json()
+        service_to_update.name = data.get('name', service_to_update.name)
+        service_to_update.price = data.get('price', service_to_update.price)
+        service_to_update.description = data.get('description', service_to_update.description)
+        service_to_update.category = data.get('category', service_to_update.category)
 
-        else:
-            data = request.get_json()
-            name = data.get('name', service_to_update.name)
-            price = data.get('price', service_to_update.price)
-            description = data.get('description', service_to_update.description)
+        db.session.commit()
 
-            service_to_update.name = name
-            service_to_update.price = price
-            service_to_update.description = description
-
-            db.session.commit()
-
-            service_name = service_to_update.name
-            return jsonify({
-                "message": f"{service_name}'s details have been successfully updated",
-                "service": {
-                    "id": service_to_update.service_id,
-                    "name": service_to_update.name,
-                    "price": service_to_update.price,
-                    "description": service_to_update.description,
-                }
-            })
+        return jsonify({
+            "message": f"{service_to_update.name}'s details have been successfully updated",
+            "service": {
+                "id": service_to_update.service_id,
+                "name": service_to_update.name,
+                "price": service_to_update.price,
+                "description": service_to_update.description,
+                 "category":service_to_update.category, 
+            }
+        }), 200
 
     except Exception as e:
         return jsonify({
             "error": str(e)
         }), HTTP_500_INTERNAL_SERVER_ERROR
+
 
 
 

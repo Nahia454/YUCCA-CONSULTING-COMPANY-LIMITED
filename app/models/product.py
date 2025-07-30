@@ -1,24 +1,18 @@
-from app.extensions import db
 from datetime import datetime
+from app.extensions import db
 
 class Product(db.Model):
     __tablename__ = "products"
     product_id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'))  
-    service_id = db.Column(db.Integer, db.ForeignKey('services.service_id'))  
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.order_id'))
-    service_id = db.Column(db.Integer, db.ForeignKey('services.service_id'))
-    quantity = db.Column(db.Integer)
-    subtotal = db.Column(db.Float)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50)) 
+    image = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    order = db.relationship('Order', backref='products')
-    service = db.relationship('Service', backref='products')
 
-   
-
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, onupdate=datetime.now)
-
-    def __init__(self, quantity, subtotal):
-        self.quantity = quantity
-        self.subtotal = subtotal
+    def __init__(self, name, category=None, image=None):
+        self.name = name
+        self.category = category
+        self.image = image
+    
