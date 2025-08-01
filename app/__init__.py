@@ -10,6 +10,7 @@ from app.controllers.booking.booking_controller import bookings
 from app.controllers.product_controller import products
 from app.controllers.feedback_controller import feedbacks
 from app.controllers.admin.admin_controller import admin
+from app.controllers.admin.admin_controller import auth_bp
 
 # Import models to register them with SQLAlchemy
 from app.models.user import User
@@ -43,6 +44,7 @@ def create_app():
     app.register_blueprint(products)
     app.register_blueprint(feedbacks)
     app.register_blueprint(admin)
+    app.register_blueprint(auth_bp)
 
     # Default route
     @app.route("/")

@@ -286,9 +286,9 @@ def admin_login():
 
 
 
+auth_bp = Blueprint('auth_bp', __name__)
 
-
-@auth_bp.route('/admin/dashboard', methods=['GET'])
+@auth_bp.route('/dashboard', methods=['GET'])
 @jwt_required()
 def admin_dashboard():
     user_id = get_jwt_identity()

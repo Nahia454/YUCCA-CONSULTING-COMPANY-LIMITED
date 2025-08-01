@@ -4,8 +4,16 @@ from flask_jwt_extended import jwt_required
 from app.status_codes import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_200_OK
 
 products = Blueprint('products', __name__, url_prefix='/api/v1/products')
+from flask import request
+from werkzeug.utils import secure_filename
+import os
 
-# Create product
+UPLOAD_FOLDER = 'path/to/save/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 @products.route('/create', methods=["POST"])
 @jwt_required()
 def create_product():
@@ -13,7 +21,7 @@ def create_product():
         data = request.get_json()
         name = data.get("name")
         category = data.get("category")
-        image = data.get("image")
+        image_file = request.files.get("image")
 
         if not name:
             return jsonify({'error': "Product name is required"}), HTTP_400_BAD_REQUEST
@@ -21,7 +29,14 @@ def create_product():
         if Product.query.filter_by(name=name).first():
             return jsonify({'error': 'Product name already exists'}), HTTP_400_BAD_REQUEST
 
-        new_product = Product(name=name, category=category, image=image)
+        image_filename = None
+        if image_file and allowed_file(image_file.filename):
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(UPLOAD_FOLDER, filename)
+            image_file.save(image_path)
+            image_filename = filename  # save just filename or relative path in DB
+
+        new_product = Product(name=name, category=category, image=image_filename)
         db.session.add(new_product)
         db.session.commit()
 
@@ -39,6 +54,7 @@ def create_product():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+
 
 # Get all products
 @products.route('/', methods=["GET"])

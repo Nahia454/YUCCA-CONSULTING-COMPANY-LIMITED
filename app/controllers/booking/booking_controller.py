@@ -1,9 +1,10 @@
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from app.models.booking import Booking, db
 from app.models.user import User
 from app.models.farmer import Farmer
+from app.models.service import Service  # import your Service model
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
 import random
 from app.status_codes import (
     HTTP_200_OK,
@@ -16,13 +17,10 @@ from app.status_codes import (
 
 bookings = Blueprint('booking', __name__, url_prefix='/api/v1/bookings')
 
-# Placeholder functions for sending email/SMS - implement your own logic or use APIs like Flask-Mail or Twilio
 def send_email(to_email, code):
-    # Implement sending email logic here
     print(f"Sending email to {to_email} with code {code}")
 
 def send_sms(to_phone, code):
-    # Implement SMS sending logic here
     print(f"Sending SMS to {to_phone} with code {code}")
 
 def send_verification_code(user, code):
@@ -36,43 +34,53 @@ def send_verification_code(user, code):
 def generate_verification_code():
     return str(random.randint(100000, 999999))
 
-# Create Booking
+
 @bookings.route('/create', methods=["POST"])
 @jwt_required()
 def create_booking():
     try:
         data = request.get_json()
-        service_id = data.get("service_id")
+        service_name = data.get("service_name")
+        booking_date_str = data.get("booking_date")  # get date string from frontend
         user_id = get_jwt_identity()
+
+        if not service_name:
+            return jsonify({"error": "Service name is required"}), HTTP_400_BAD_REQUEST
+
+        if not booking_date_str:
+            return jsonify({"error": "Booking date is required"}), HTTP_400_BAD_REQUEST
+
+        # Parse the date string into a datetime.date object
+        try:
+            booking_date = datetime.strptime(booking_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), HTTP_400_BAD_REQUEST
 
         user = User.query.get(user_id)
         if not user:
             return jsonify({"error": "User not found"}), HTTP_404_NOT_FOUND
 
-        # Optional: Try to get farmer linked to user (if applicable)
-        farmer = Farmer.query.filter_by(user_id=user.user_id).first()
+        service = Service.query.filter_by(name=service_name).first()
+        if not service:
+            return jsonify({"error": "Service not found"}), HTTP_404_NOT_FOUND
 
-        if not service_id:
-            return jsonify({"error": "Service ID is required"}), HTTP_400_BAD_REQUEST
-        
-        # code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        farmer = Farmer.query.filter_by(user_id=user.user_id).first()
 
         verification_code = generate_verification_code()
 
         new_booking = Booking(
             user_id=user_id,
             farmer_id=farmer.farmer_id if farmer else None,
-            service_id=service_id,
+            service_id=service.service_id,
             status="pending",
             verification_code=verification_code,
             is_verified=False,
-            booking_date=datetime.utcnow().date()
+            booking_date=booking_date  # use the parsed date here
         )
 
         db.session.add(new_booking)
         db.session.commit()
 
-        # Send verification code by email or SMS
         send_verification_code(user, verification_code)
 
         return jsonify({
@@ -83,6 +91,7 @@ def create_booking():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+
 
 
 # Get All Bookings
