@@ -8,7 +8,7 @@ from app.controllers.users.user_controller import users
 from app.controllers.services.service_controller import services
 from app.controllers.farmer.farmer_controller import farmers
 from app.controllers.booking.booking_controller import bookings
-
+from app.controllers.feedback.feedback_controller import feedback
 
 
 
@@ -27,13 +27,11 @@ def create_app():  # This is an application factory
     bcrypt.init_app(app)
 
     app.config['JWT_SECRET_KEY'] = 'HS256'
-    # jwt = JWTManager(app)
+    
 
 
     from app.models.user import User
     from app.models.service import Service
-    from app.models.product import Product
-    from app.models.order import Order
     from app.models.booking import Booking
     from app.models.feedback import Feedback
     from app.models.farmer import Farmer
@@ -47,6 +45,8 @@ def create_app():  # This is an application factory
     app.register_blueprint(services)
     app.register_blueprint(farmers)
     app.register_blueprint(bookings)
+    app.register_blueprint(feedback)
+
 
     
    # migrations are always in order
