@@ -42,32 +42,36 @@ def create_admin():
     if User.query.filter_by(contact=data['contact']).first():
         return jsonify({"error": "Contact already exists"}), HTTP_409_CONFLICT
 
+    #  Hash password before saving
+    plain_password = data['password']  # For email
+    hashed_password = bcrypt.generate_password_hash(plain_password).decode('utf-8')
+
     new_admin = User(
         first_name=data['first_name'],
         last_name=data['last_name'],
         email=data['email'],
         contact=data['contact'],
+        password=hashed_password,
         user_type='admin'
     )
-    new_admin.set_password(data['password'])
 
     try:
         db.session.add(new_admin)
         db.session.commit()
 
+        #  Send email with plain password
         msg = Message(
-            subject="Welcome to the YUCCA Admin Panel ",
+            subject="Welcome to YUCCA Admin Panel",
             recipients=[new_admin.email],
             body=f"""Hello {new_admin.first_name},
 
 You have been successfully added as an admin on the YUCCA website.
 
-Login using your registered email and the password shared with you below:
+Login using your email and this password:
 
-Email: {new_admin.email}
-Password: {data['password']}
+ Password: {plain_password}
 
-Please keep this information secure.
+ Please change your password after login.
 
 Best regards,  
 Super Admin  
@@ -76,7 +80,7 @@ YUCCA CONSULTING LIMITED"""
         mail.send(msg)
 
         return jsonify({
-            "message": "Admin user created successfully and email sent",
+            "message": "Admin created successfully and email sent",
             "admin_details": {
                 "first_name": new_admin.first_name,
                 "last_name": new_admin.last_name,
@@ -99,7 +103,7 @@ def get_all_admins():
 
     admins = User.query.filter_by(user_type='admin').all()
     admin_list = [{
-        'id': admin.id,
+        'id': admin.user_id,
         'first_name': admin.first_name,
         'last_name': admin.last_name,
         'email': admin.email,
@@ -125,7 +129,7 @@ def get_admin(id):
 
     return jsonify({
         "admin": {
-            'id': admin.id,
+            'id': admin.user_id,
             'first_name': admin.first_name,
             'last_name': admin.last_name,
             'email': admin.email,
@@ -141,7 +145,7 @@ def update_admin(id):
     if not is_super_admin():
         return jsonify({"error": "Only superadmin can update admins"}), HTTP_403_FORBIDDEN
 
-    admin = User.query.filter_by(id=id, user_type='admin').first()
+    admin = User.query.filter_by(user_id=id, user_type='admin').first()
     if not admin:
         return jsonify({"error": "Admin not found"}), HTTP_404_NOT_FOUND
 
@@ -149,10 +153,10 @@ def update_admin(id):
     email = data.get('email', admin.email)
     contact = data.get('contact', admin.contact)
 
-    if email != admin.email and User.query.filter(User.email == email, User.id != admin.id).first():
+    if email != admin.email and User.query.filter(User.email == email, User.user_id != admin.id).first():
         return jsonify({"error": "Email already in use"}), HTTP_409_CONFLICT
 
-    if contact != admin.contact and User.query.filter(User.contact == contact, User.id != admin.id).first():
+    if contact != admin.contact and User.query.filter(User.contact == contact, User.user_id != admin.id).first():
         return jsonify({"error": "Contact already in use"}), HTTP_409_CONFLICT
 
     admin.first_name = data.get('first_name', admin.first_name)
@@ -160,13 +164,41 @@ def update_admin(id):
     admin.email = email
     admin.contact = contact
 
-    if 'password' in data:
+    # Flag to check if password changed (to include in email)
+    password_changed = False
+    if 'password' in data and data['password']:
         admin.set_password(data['password'])
+        password_changed = True
 
     try:
         db.session.commit()
+
+        # Send notification email to the admin about their updated account
+        msg_body = f"""Hello {admin.first_name},
+
+Your admin account details have been updated on the YUCCA website.
+
+Updated details:
+First Name: {admin.first_name}
+Last Name: {admin.last_name}
+Email: {admin.email}
+Contact: {admin.contact}
+"""
+
+        if password_changed:
+            msg_body += "\nYour password has been changed.\nPlease use your new password to log in."
+
+        msg_body += "\n\nIf you did not request these changes, please contact support immediately.\n\nBest regards,\nSuper Admin\nYUCCA CONSULTING LIMITED"
+
+        msg = Message(
+            subject="Your Admin Account Has Been Updated",
+            recipients=[admin.email],
+            body=msg_body
+        )
+        mail.send(msg)
+
         return jsonify({
-            "message": "Admin updated successfully",
+            "message": "Admin updated successfully and notification email sent",
             "admin": {
                 "first_name": admin.first_name,
                 "last_name": admin.last_name,
@@ -175,10 +207,10 @@ def update_admin(id):
                 "created_at": admin.created_at.isoformat()
             }
         }), HTTP_200_OK
+
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
-
 
 @admin.route('/delete/<int:id>', methods=['DELETE'])
 @jwt_required()
@@ -186,7 +218,7 @@ def delete_admin(id):
     if not is_super_admin():
         return jsonify({"error": "Only superadmin can delete admins"}), HTTP_403_FORBIDDEN
 
-    admin = User.query.filter_by(id=id, user_type='admin').first()
+    admin = User.query.filter_by(user_id=id, user_type='admin').first()
     if not admin:
         return jsonify({"error": "Admin not found"}), HTTP_404_NOT_FOUND
 
@@ -266,69 +298,121 @@ from app.models.booking import Booking
 from app.models.product import Product
 from app.models.farmer import Farmer
 from app.models.feedback import Feedback
+from flask import Blueprint, request, jsonify
+from app.models.user import User
+from flask_jwt_extended import create_access_token
+from app.extensions import bcrypt
+from app.status_codes import HTTP_401_UNAUTHORIZED, HTTP_200_OK
 
-auth_bp = Blueprint('auth_bp', __name__, url_prefix='/api')
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token
+from app.models.user import User
+from app.extensions import bcrypt
+from app.status_codes import HTTP_200_OK, HTTP_401_UNAUTHORIZED
 
-@auth_bp.route('/admin/login', methods=['POST'])
+
+
+@admin.route('/login', methods=['POST'])
 def admin_login():
     data = request.get_json()
     email = data.get('email')
     password = data.get('password')
 
-    user = User.query.filter_by(email=email, user_type='admin').first()
+    print(f"Login attempt: email={email}, password={password}")
 
-    # 🔴 TEMPORARY: Using plain password check (NOT secure, just for testing)
-    if not user or user.password != password:
-        return jsonify({"error": "Invalid credentials"}), 401
+    user = User.query.filter_by(email=email).first()
 
-    access_token = create_access_token(identity=user.id)
-    return jsonify(access_token=access_token, user={"id": user.id, "email": user.email})
+    if not user:
+        print("User not found")
+        return jsonify({"error": "Invalid email or password"}), HTTP_401_UNAUTHORIZED
 
+    print(f"Found user: {user.email}, type: {user.user_type}")
 
+    if user.user_type not in ['admin', 'super_admin']:
+        print("Access denied: user_type is", user.user_type)
+        return jsonify({"error": "Access denied: Not an admin"}), HTTP_401_UNAUTHORIZED
 
-auth_bp = Blueprint('auth_bp', __name__)
+    if not bcrypt.check_password_hash(user.password, password):
+        print("Password check failed")
+        return jsonify({"error": "Invalid email or password"}), HTTP_401_UNAUTHORIZED
 
-@auth_bp.route('/dashboard', methods=['GET'])
-@jwt_required()
-def admin_dashboard():
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    print("Password check passed")
 
-    if not user or user.user_type != 'admin':
-        return jsonify({"error": "Unauthorized"}), 403
-
-    data = {
-        "welcome": f"Welcome {user.first_name} {user.last_name}",
-        "stats": {
-            "total_users": User.query.count(),
-            "total_services": Service.query.count(),
-            "total_bookings": Booking.query.count(),
-            "total_products": Product.query.count(),
-            "total_farmers": Farmer.query.count(),
-            "total_feedback": Feedback.query.count()
+    access_token = create_access_token(identity=str(user.user_id))
+    return jsonify({
+        "access_token": access_token,
+        "user": {
+            "id": user.user_id,
+            "email": user.email,
+            "user_type": user.user_type
         }
-    }
-
-    return jsonify(data)
+    }), HTTP_200_OK
 
 
 
-# # Generate the hashed password
-# password_hash = bcrypt.generate_password_hash('admin1234').decode('utf-8')
 
-# # Create the superadmin user
-# super_admin = User(
-#     first_name='Aisha',
-#     last_name='Nalweyiso',
-#     contact='0766753527',
-#     email='nalweyisoaisha@gmail.com',
-#     password=password_hash,
-#     user_type ='superadmin'
-# )
+@admin.route('/profile', methods=['GET'])
+@jwt_required()
+def get_admin_profile():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
 
-# # Add and commit to the database
-# db.session.add(super_admin)
-# db.session.commit()
+    if not user:
+        return jsonify({"error": "User not found"}), HTTP_404_NOT_FOUND
 
-# # Verify by querying the super admin user
-# User.query.filter_by(email='nalweyisoaisha@gmail.com').first()
+    if user.user_type not in ["admin", "super_admin"]:
+        return jsonify({"error": "Unauthorized"}), HTTP_403_FORBIDDEN
+
+    return jsonify({
+        "admin": {
+            "id": user.user_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "contact": user.contact,
+            "user_type": user.user_type,
+            "created_at": user.created_at.isoformat()
+        }
+    }), HTTP_200_OK
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # GET admin profile
+# @admin.route('/<int:id>', methods=['GET'])
+# @jwt_required()
+# def fetch_admin(id):
+#     user = User.query.get_or_404(id)
+#     return jsonify({
+#         "id": user.user_id,
+#         "email": user.email,
+#         "name": user.name,
+#         "user_type": user.user_type
+#     })
+
+# # PUT update profile
+# @admin.route('/<int:id>', methods=['PUT'])
+# @jwt_required()
+# def update_admin(id):
+#     user = User.query.get_or_404(id)
+#     data = request.get_json()
+#     user.name = data.get("name", user.name)
+#     db.session.commit()
+#     return jsonify({"message": "Profile updated"})

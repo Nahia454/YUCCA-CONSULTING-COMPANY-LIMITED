@@ -7,13 +7,12 @@ class Service(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255))
     price = db.Column(db.Float)
-    category = db.Column(db.String(100))
     image= db.Column(db.String(255)) 
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, onupdate=datetime.now)
 
-    def __init__(self, name, description, price, category):
+    def __init__(self, name, description, price, image=None):
         self.name = name
         self.description = description
         self.price = price
-        self.category = category
+        self.image = image
