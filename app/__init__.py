@@ -19,6 +19,7 @@ from app.controllers.admin.admin_controller import admin
 from app.controllers.contact_controller import contact
 from app.controllers.dash_controller import dashboard
 from app.controllers.home.homepage_controller import homepage
+from app.controllers.about_controller import about
 
 # Import models (so SQLAlchemy recognizes them)
 from app.models.user import User
@@ -71,6 +72,7 @@ def create_app():
     app.register_blueprint(contact)
     app.register_blueprint(dashboard)
     app.register_blueprint(homepage)
+    app.register_blueprint(about)
 
     # Default route
     @app.route("/")

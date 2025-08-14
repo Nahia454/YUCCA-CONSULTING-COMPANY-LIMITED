@@ -4,7 +4,7 @@ from app.models.homepagesections import HomepageSection
 from app.models.homepagemedia import HomepageMedia
 from flask_jwt_extended import jwt_required
 
-homepage = Blueprint('homepage', __name__, url_prefix='/api/homepage')
+homepage = Blueprint('homepage', __name__, url_prefix='/api/v1/homepage')
 
 # --- INTRO --- #
 
@@ -15,15 +15,20 @@ def get_intro():
         return jsonify({"message": "Intro not found"}), 404
     return jsonify({
         "id": intro.id,
-        "title": intro.title,
-        "description": intro.description
+        "hero_text": intro.hero_text,
+        "intro_title": intro.intro_title,
+        "intro_description": intro.intro_description
     })
 
 @homepage.route('/intro', methods=['POST'])
 @jwt_required()
 def create_intro():
     data = request.get_json()
-    intro = HomeIntro(title=data['title'], description=data['description'])
+    intro = HomeIntro(
+        hero_text=data.get('hero_text', ''),
+        intro_title=data.get('intro_title', ''),
+        intro_description=data.get('intro_description', '')
+    )
     db.session.add(intro)
     db.session.commit()
     return jsonify({"message": "Intro created", "id": intro.id}), 201
@@ -35,8 +40,9 @@ def update_intro(id):
     if not intro:
         return jsonify({"message": "Intro not found"}), 404
     data = request.get_json()
-    intro.title = data.get('title', intro.title)
-    intro.description = data.get('description', intro.description)
+    intro.hero_text = data.get('hero_text', intro.hero_text)
+    intro.intro_title = data.get('intro_title', intro.intro_title)
+    intro.intro_description = data.get('intro_description', intro.intro_description)
     db.session.commit()
     return jsonify({"message": "Intro updated"})
 
@@ -49,6 +55,7 @@ def delete_intro(id):
     db.session.delete(intro)
     db.session.commit()
     return jsonify({"message": "Intro deleted"})
+
 
 
 # --- SECTIONS --- #
