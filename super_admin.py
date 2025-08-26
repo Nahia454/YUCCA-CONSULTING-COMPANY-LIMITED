@@ -14,7 +14,7 @@ with app.app_context():
             contact='0766753527',
             email='nalweyisoa22@gmail.com',
             password=password_hash,
-            user_type='super_admin'  # <-- FIXED here
+            user_type='super_admin'  
         )
         db.session.add(super_admin)
         db.session.commit()

@@ -5,8 +5,8 @@ import os
 # Load environment variables from .env
 load_dotenv()
 
-from app.extensions import db, migrate, jwt, bcrypt, cors, mail
-
+from app.extensions import db, migrate, jwt, bcrypt, mail
+from flask_cors import CORS
 # Import blueprints
 from app.controllers.auth_controller import auth
 from app.controllers.users.user_controller import users
@@ -20,6 +20,8 @@ from app.controllers.contact_controller import contact
 from app.controllers.dash_controller import dashboard
 from app.controllers.home.homepage_controller import homepage
 from app.controllers.about_controller import about
+from app.controllers.footer_controller import footer
+from app.controllers.team_controller import team
 
 # Import models (so SQLAlchemy recognizes them)
 from app.models.user import User
@@ -29,9 +31,11 @@ from app.models.booking import Booking
 from app.models.feedback import Feedback
 from app.models.farmer import Farmer
 from app.models.contact import ContactMessage
-from app.models.homeintro import HomeIntro
-from app.models.homepagemedia import HomepageMedia
-from app.models.homepagesections import HomepageSection
+from app.models.homepage import HomeIntro, HomeProduct, HomePartner, HomeIntervention,HomeDealer
+from app.models.footer import Footer
+from app.models.team import TeamMember
+
+
 
 def create_app():
     app = Flask(__name__)
@@ -55,7 +59,8 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
-    cors.init_app(app, supports_credentials=True)
+    # cors.init_app(app, supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
     jwt.init_app(app)
     bcrypt.init_app(app)
     mail.init_app(app)
@@ -73,6 +78,8 @@ def create_app():
     app.register_blueprint(dashboard)
     app.register_blueprint(homepage)
     app.register_blueprint(about)
+    app.register_blueprint(footer)
+    app.register_blueprint(team)
 
     # Default route
     @app.route("/")
