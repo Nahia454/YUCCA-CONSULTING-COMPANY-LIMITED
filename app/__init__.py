@@ -26,11 +26,11 @@ from app.controllers.team_controller import team
 # Import models (so SQLAlchemy recognizes them)
 from app.models.user import User
 from app.models.service import Service
-from app.models.product import Product
+from app.models.product import Product,ProductBanner
 from app.models.booking import Booking
 from app.models.feedback import Feedback
 from app.models.farmer import Farmer
-from app.models.contact import ContactMessage
+from app.models.contact import ContactMessage,ContactBanner
 from app.models.homepage import HomeIntro, HomeProduct, HomePartner, HomeIntervention,HomeDealer
 from app.models.footer import Footer
 from app.models.team import TeamMember

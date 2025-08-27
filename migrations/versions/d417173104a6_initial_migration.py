@@ -1,8 +1,8 @@
 """initial migration
 
-Revision ID: 47d41047a3f4
+Revision ID: d417173104a6
 Revises: 
-Create Date: 2025-08-20 06:21:53.965847
+Create Date: 2025-08-27 10:20:45.349636
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '47d41047a3f4'
+revision = 'd417173104a6'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -47,25 +47,59 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('footers',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('link_name', sa.String(length=100), nullable=False),
+    sa.Column('link_url', sa.String(length=255), nullable=False),
+    sa.Column('email', sa.String(length=100), nullable=True),
+    sa.Column('phone', sa.String(length=50), nullable=True),
+    sa.Column('address', sa.String(length=255), nullable=True),
+    sa.Column('facebook', sa.String(length=255), nullable=True),
+    sa.Column('twitter', sa.String(length=255), nullable=True),
+    sa.Column('linkedin', sa.String(length=255), nullable=True),
+    sa.Column('instagram', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('home_dealers',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('image', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('home_interventions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('image', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('home_intro',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('hero_text', sa.String(length=255), nullable=False),
-    sa.Column('intro_title', sa.String(length=255), nullable=False),
-    sa.Column('intro_description', sa.Text(), nullable=False),
+    sa.Column('title', sa.String(length=150), nullable=False),
+    sa.Column('text', sa.Text(), nullable=True),
+    sa.Column('image', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('homepage_media',
+    op.create_table('home_partners',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('media_type', sa.String(length=50), nullable=False),
-    sa.Column('image_url', sa.String(length=255), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('logo', sa.String(length=255), nullable=True),
+    sa.Column('link', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('homepage_sections',
+    op.create_table('home_products',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(length=100), nullable=False),
-    sa.Column('content', sa.Text(), nullable=False),
-    sa.Column('image_url', sa.String(length=255), nullable=True),
-    sa.Column('section_type', sa.String(length=50), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('image', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('products',
@@ -87,6 +121,15 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('service_id')
     )
+    op.create_table('team_members',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.String(length=255), nullable=False),
+    sa.Column('image', sa.String(length=255), nullable=True),
+    sa.Column('twitter', sa.String(length=200), nullable=True),
+    sa.Column('linkedin', sa.String(length=255), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('users',
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('first_name', sa.String(length=100), nullable=False),
@@ -100,6 +143,20 @@ def upgrade():
     sa.PrimaryKeyConstraint('user_id'),
     sa.UniqueConstraint('email')
     )
+    op.create_table('bookings',
+    sa.Column('booking_id', sa.Integer(), nullable=False),
+    sa.Column('service_id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.String(length=50), nullable=True),
+    sa.Column('verification_code', sa.String(length=6), nullable=True),
+    sa.Column('is_verified', sa.Boolean(), nullable=True),
+    sa.Column('preferred_date', sa.Date(), nullable=False),
+    sa.Column('guest_name', sa.String(length=100), nullable=True),
+    sa.Column('guest_contact', sa.String(length=100), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['service_id'], ['services.service_id'], ),
+    sa.PrimaryKeyConstraint('booking_id')
+    )
     op.create_table('farmers',
     sa.Column('farmer_id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
@@ -110,24 +167,6 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
     sa.PrimaryKeyConstraint('farmer_id')
-    )
-    op.create_table('bookings',
-    sa.Column('booking_id', sa.Integer(), nullable=False),
-    sa.Column('farmer_id', sa.Integer(), nullable=True),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('service_id', sa.Integer(), nullable=False),
-    sa.Column('status', sa.String(length=50), nullable=True),
-    sa.Column('verification_code', sa.String(length=6), nullable=True),
-    sa.Column('is_verified', sa.Boolean(), nullable=True),
-    sa.Column('preferred_date', sa.Date(), nullable=False),
-    sa.Column('guest_name', sa.String(length=100), nullable=True),
-    sa.Column('guest_contact', sa.String(length=100), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['farmer_id'], ['farmers.farmer_id'], ),
-    sa.ForeignKeyConstraint(['service_id'], ['services.service_id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
-    sa.PrimaryKeyConstraint('booking_id')
     )
     op.create_table('feedbacks',
     sa.Column('feedback_id', sa.Integer(), nullable=False),
@@ -148,14 +187,18 @@ def upgrade():
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('feedbacks')
-    op.drop_table('bookings')
     op.drop_table('farmers')
+    op.drop_table('bookings')
     op.drop_table('users')
+    op.drop_table('team_members')
     op.drop_table('services')
     op.drop_table('products')
-    op.drop_table('homepage_sections')
-    op.drop_table('homepage_media')
+    op.drop_table('home_products')
+    op.drop_table('home_partners')
     op.drop_table('home_intro')
+    op.drop_table('home_interventions')
+    op.drop_table('home_dealers')
+    op.drop_table('footers')
     op.drop_table('contact_message')
     op.drop_table('about_page')
     # ### end Alembic commands ###
