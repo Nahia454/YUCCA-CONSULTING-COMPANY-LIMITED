@@ -1,15 +1,20 @@
-from app.extensions import db
 from datetime import datetime
+from app.extensions import db
 
 class Booking(db.Model):
     __tablename__ = "bookings"
     booking_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))  
-    service_id = db.Column(db.Integer, db.ForeignKey('services.service_id'))  
-    status = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.now())  
-    updated_at = db.Column(db.DateTime, onupdate=datetime.now())  
+    service_id = db.Column(db.Integer, db.ForeignKey('services.service_id'), nullable=False)
+    status = db.Column(db.String(50), default="pending")
+    verification_code = db.Column(db.String(6), nullable=True)
+    is_verified = db.Column(db.Boolean, default=False)
+    preferred_date = db.Column(db.Date, nullable=False)
+    guest_name = db.Column(db.String(100), nullable=True)
+    guest_contact = db.Column(db.String(100), nullable=True)
 
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    user = db.relationship('User', backref='bookings')
+  
     service = db.relationship('Service', backref='bookings')
+

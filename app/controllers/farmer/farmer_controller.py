@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.models.farmer import Farmer , db
+from app.models.user import User
 from app.extensions import bcrypt, jwt
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.status_codes import HTTP_400_BAD_REQUEST, HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR, HTTP_200_OK,HTTP_403_FORBIDDEN
@@ -117,49 +118,45 @@ def getfarmer(id):
         }),HTTP_500_INTERNAL_SERVER_ERROR
 
 
-#updating the farmer details
+# Updating farmer details — Admin only
 @farmers.route('/edit/<int:id>', methods=["PUT", "PATCH"])
 @jwt_required()
 def update_farmer_details(id):
     try:
-        current_farmer_id = int(get_jwt_identity())
-        loggedInfarmer = Farmer.query.filter_by(farmer_id=current_farmer_id).first()
+        current_user_id = int(get_jwt_identity())
+        loggedinuser = User.query.get(current_user_id)
 
-        farmer_to_update = Farmer.query.filter_by(farmer_id=id).first()
+        # Check if the logged-in user is an admin
+        if loggedinuser.user_type != 'admin':
+            return jsonify({"error": "You are not authorized to update farmer details"}), HTTP_403_FORBIDDEN
+
+        # Get the farmer to update
+        farmer_to_update = Farmer.query.get(id)
 
         if not farmer_to_update:
-            return jsonify({"error": "farmer not found"}), HTTP_404_NOT_FOUND
+            return jsonify({"error": "Farmer not found"}), HTTP_404_NOT_FOUND
 
-        elif farmer_to_update.farmer_id != current_farmer_id:
-            return jsonify({"error": "You are not authorized to update the farmer details"}), HTTP_403_FORBIDDEN
+        # Update fields
+        data = request.get_json()
+        farmer_to_update.name = data.get('name', farmer_to_update.name)
+        farmer_to_update.location = data.get('location', farmer_to_update.location)
+        farmer_to_update.crops_grown = data.get('crops_grown', farmer_to_update.crops_grown)
 
-        else:
-            data = request.get_json()
-            name = data.get('name', farmer_to_update.name)
-            location = data.get('location', farmer_to_update.location)
-            crops_grown = data.get('crops_grown', farmer_to_update.crops_grown)
+        db.session.commit()
 
-            farmer_to_update.name = name
-            farmer_to_update.location = location
-            farmer_to_update.crops_grown = crops_grown
-
-            db.session.commit()
-
-            farmer_name = farmer_to_update.name
-            return jsonify({
-                "message": f"{farmer_name}'s details have been successfully updated",
-                "farmer": {
-                    "id": farmer_to_update.farmer_id,
-                    "name": farmer_to_update.name,
-                    "location": farmer_to_update.location,
-                    "crops_grown": farmer_to_update.crops_grown,
-                }
-            })
+        return jsonify({
+            "message": f"{farmer_to_update.name}'s details have been successfully updated",
+            "farmer": {
+                "id": farmer_to_update.farmer_id,
+                "name": farmer_to_update.name,
+                "location": farmer_to_update.location,
+                "crops_grown": farmer_to_update.crops_grown,
+            }
+        }), 200
 
     except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), HTTP_500_INTERNAL_SERVER_ERROR
+        return jsonify({"error": str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+
 
 
 
@@ -167,23 +164,25 @@ def update_farmer_details(id):
 @jwt_required()
 def delete_farmer(id):
     try:
-        # Retrieve the farmer object from the database
+        current_user_id = int(get_jwt_identity())
+        loggedInUser = User.query.get(current_user_id)
+
+        # Ensure the user exists and is an admin
+        if not loggedInUser or loggedInUser.user_type != 'admin':
+            return jsonify({'error': 'Unauthorized. Only admins can delete a farmer'}), HTTP_403_FORBIDDEN
+
+        # Find the farmer to delete
         farmer = Farmer.query.get(id)
         if not farmer:
-            return jsonify({'error': 'farmer not found'}), HTTP_404_NOT_FOUND
+            return jsonify({'error': 'Farmer not found'}), HTTP_404_NOT_FOUND
 
-        # Check if the authenticated user is the author of the farmer
-        if farmer.farmer_id != get_jwt_identity():
-            return jsonify({'error': 'Unauthorized to delete this farmer'}), HTTP_403_FORBIDDEN
-
-        # Delete the farmer from the database
+        # Delete the farmer
         db.session.delete(farmer)
         db.session.commit()
 
-        # Return a success response
-        return jsonify({'message': 'farmer deleted successfully'}), HTTP_200_OK
+        return jsonify({'message': 'Farmer deleted successfully'}), HTTP_200_OK
 
     except Exception as e:
-        # Rollback in case of an error
         db.session.rollback()
         return jsonify({'error': str(e)}), HTTP_500_INTERNAL_SERVER_ERROR
+

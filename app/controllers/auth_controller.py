@@ -13,8 +13,8 @@ auth = Blueprint('auth', __name__, url_prefix='/api/v1/auth')
 
 #User registration
 
-@auth.route('/register' , methods=['POST'])
-def register_user():
+@auth.route('/create' , methods=['POST'])
+def create_user():
     #Storing request values
     data = request.json
     first_name = data.get('first_name')
